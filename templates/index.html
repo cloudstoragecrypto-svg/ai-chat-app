@@ -4,11 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Chat - {{ username }}</title>
-    <!-- Marked.js for Markdown rendering -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- Highlight.js for code syntax highlighting -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -16,21 +11,23 @@
             box-sizing: border-box;
         }
         
-        html, body {
-            height: 100%;
-            width: 100%;
-            overflow: hidden;
-        }
-        
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
         }
         
         .chat-container {
             width: 100%;
-            height: 100%;
+            max-width: 800px;
+            height: 90vh;
             background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -39,32 +36,31 @@
         .chat-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 15px 20px;
+            padding: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-shrink: 0;
         }
         
         .header-left {
             display: flex;
             flex-direction: column;
-            gap: 3px;
+            gap: 5px;
         }
         
         .chat-header h1 {
-            font-size: 20px;
+            font-size: 24px;
             font-weight: 600;
         }
         
         .user-info {
-            font-size: 13px;
+            font-size: 14px;
             opacity: 0.9;
         }
         
         .header-controls {
             display: flex;
-            gap: 8px;
+            gap: 10px;
         }
         
         .header-controls button {
@@ -74,7 +70,7 @@
             padding: 8px 15px;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 13px;
+            font-size: 14px;
             transition: all 0.3s;
         }
         
@@ -83,23 +79,22 @@
         }
         
         .model-selector {
-            padding: 12px 20px;
+            padding: 15px 20px;
             background: #f8f9fa;
             border-bottom: 1px solid #e0e0e0;
-            flex-shrink: 0;
         }
         
         .model-selector label {
-            font-size: 13px;
+            font-size: 14px;
             color: #666;
             margin-right: 10px;
         }
         
         .model-selector select {
-            padding: 6px 12px;
+            padding: 8px 12px;
             border: 1px solid #ddd;
             border-radius: 8px;
-            font-size: 13px;
+            font-size: 14px;
             cursor: pointer;
             background: white;
         }
@@ -127,10 +122,11 @@
         }
         
         .message-content {
-            max-width: 80%;
+            max-width: 70%;
             padding: 12px 18px;
             border-radius: 18px;
             word-wrap: break-word;
+            white-space: pre-wrap;
         }
         
         .message.user .message-content {
@@ -144,105 +140,10 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         
-        /* Markdown styles for assistant messages */
-        .message.assistant .message-content h1,
-        .message.assistant .message-content h2,
-        .message.assistant .message-content h3 {
-            margin-top: 16px;
-            margin-bottom: 8px;
-            font-weight: 600;
-        }
-        
-        .message.assistant .message-content h1 { font-size: 1.5em; }
-        .message.assistant .message-content h2 { font-size: 1.3em; }
-        .message.assistant .message-content h3 { font-size: 1.1em; }
-        
-        .message.assistant .message-content p {
-            margin-bottom: 12px;
-            line-height: 1.6;
-        }
-        
-        .message.assistant .message-content ul,
-        .message.assistant .message-content ol {
-            margin: 12px 0;
-            padding-left: 24px;
-        }
-        
-        .message.assistant .message-content li {
-            margin-bottom: 6px;
-            line-height: 1.5;
-        }
-        
-        .message.assistant .message-content code {
-            background: #f4f4f4;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
-            color: #e83e8c;
-        }
-        
-        .message.assistant .message-content pre {
-            background: #1e1e1e;
-            padding: 16px;
-            border-radius: 8px;
-            overflow-x: auto;
-            margin: 12px 0;
-        }
-        
-        .message.assistant .message-content pre code {
-            background: none;
-            padding: 0;
-            color: #d4d4d4;
-            font-size: 0.9em;
-        }
-        
-        .message.assistant .message-content blockquote {
-            border-left: 4px solid #667eea;
-            padding-left: 16px;
-            margin: 12px 0;
-            color: #666;
-            font-style: italic;
-        }
-        
-        .message.assistant .message-content a {
-            color: #667eea;
-            text-decoration: none;
-        }
-        
-        .message.assistant .message-content a:hover {
-            text-decoration: underline;
-        }
-        
-        .message.assistant .message-content table {
-            border-collapse: collapse;
-            width: 100%;
-            margin: 12px 0;
-        }
-        
-        .message.assistant .message-content th,
-        .message.assistant .message-content td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        
-        .message.assistant .message-content th {
-            background: #f4f4f4;
-            font-weight: 600;
-        }
-        
-        .message.assistant .message-content hr {
-            border: none;
-            border-top: 2px solid #e0e0e0;
-            margin: 16px 0;
-        }
-        
         .chat-input-container {
-            padding: 15px 20px;
+            padding: 20px;
             background: white;
             border-top: 1px solid #e0e0e0;
-            flex-shrink: 0;
         }
         
         .chat-input-form {
@@ -258,7 +159,6 @@
             font-size: 15px;
             outline: none;
             transition: border-color 0.3s;
-            font-family: inherit;
         }
         
         .chat-input:focus {
@@ -275,7 +175,6 @@
             font-weight: 600;
             cursor: pointer;
             transition: transform 0.2s;
-            white-space: nowrap;
         }
         
         .send-button:hover {
@@ -320,29 +219,6 @@
             0%, 80%, 100% { opacity: 0; }
             40% { opacity: 1; }
         }
-        
-        /* Copy button for code blocks */
-        .code-block-wrapper {
-            position: relative;
-        }
-        
-        .copy-button {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background: rgba(255,255,255,0.1);
-            color: white;
-            border: 1px solid rgba(255,255,255,0.2);
-            padding: 4px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            transition: all 0.2s;
-        }
-        
-        .copy-button:hover {
-            background: rgba(255,255,255,0.2);
-        }
     </style>
 </head>
 <body>
@@ -350,7 +226,7 @@
         <div class="chat-header">
             <div class="header-left">
                 <h1>🤖 AI Chat Assistant</h1>
-                <div class="user-info">👤 {{ username }}</div>
+                <div class="user-info">👤 Logged in as: {{ username }}</div>
             </div>
             <div class="header-controls">
                 <button onclick="clearChat()">Clear Chat</button>
@@ -417,18 +293,6 @@
         const loading = document.getElementById('loading');
         const modelSelect = document.getElementById('model-select');
 
-        // Configure marked.js for better rendering
-        marked.setOptions({
-            breaks: true,
-            gfm: true,
-            highlight: function(code, lang) {
-                if (lang && hljs.getLanguage(lang)) {
-                    return hljs.highlight(code, { language: lang }).value;
-                }
-                return hljs.highlightAuto(code).value;
-            }
-        });
-
         // Load chat history on page load
         window.addEventListener('load', loadHistory);
 
@@ -454,38 +318,7 @@
             
             const contentDiv = document.createElement('div');
             contentDiv.className = 'message-content';
-            
-            if (role === 'assistant') {
-                // Render markdown for assistant messages
-                contentDiv.innerHTML = marked.parse(content);
-                
-                // Add copy buttons to code blocks
-                contentDiv.querySelectorAll('pre code').forEach((block) => {
-                    const wrapper = document.createElement('div');
-                    wrapper.className = 'code-block-wrapper';
-                    
-                    const copyBtn = document.createElement('button');
-                    copyBtn.className = 'copy-button';
-                    copyBtn.textContent = 'Copy';
-                    copyBtn.onclick = function() {
-                        navigator.clipboard.writeText(block.textContent);
-                        copyBtn.textContent = 'Copied!';
-                        setTimeout(() => copyBtn.textContent = 'Copy', 2000);
-                    };
-                    
-                    block.parentNode.parentNode.insertBefore(wrapper, block.parentNode);
-                    wrapper.appendChild(block.parentNode);
-                    wrapper.appendChild(copyBtn);
-                });
-                
-                // Highlight code blocks
-                contentDiv.querySelectorAll('pre code').forEach((block) => {
-                    hljs.highlightElement(block);
-                });
-            } else {
-                // Plain text for user messages
-                contentDiv.textContent = content;
-            }
+            contentDiv.textContent = content;
             
             messageDiv.appendChild(contentDiv);
             chatMessages.appendChild(messageDiv);
