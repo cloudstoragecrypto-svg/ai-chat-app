@@ -7,7 +7,10 @@ import secrets
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 
-app = Flask(__name__)
+# Get the absolute path to the templates folder
+template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'templates'))
+
+app = Flask(__name__, template_folder=template_dir)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
 
 # OpenRouter API configuration
@@ -174,7 +177,7 @@ def chat():
     try:
         data = request.json
         user_message = data.get('message', '')
-        selected_model = data.get('model', 'meta-llama/llama-3.1-8b-instruct:free')
+        selected_model = data.get('model', 'google/gemini-2.0-flash-exp:free')
         
         if not user_message:
             return jsonify({'error': 'No message provided'}), 400
@@ -190,35 +193,65 @@ def chat():
         # Add current message to history
         messages = history + [{"role": "user", "content": user_message}]
         
-        # Call OpenRouter API
-        headers = {
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": request.host_url,
-            "X-Title": "Personal AI Chat"
-        }
+        # Fallback models if primary is rate-limited
+        fallback_models = [
+            selected_model,
+            'google/gemini-2.0-flash-exp:free',
+            'meta-llama/llama-3.1-8b-instruct:free',
+            'mistralai/mistral-7b-instruct:free'
+        ]
         
-        payload = {
-            "model": selected_model,
-            "messages": messages
-        }
+        # Try models in order until one works
+        last_error = None
+        for model in fallback_models:
+            try:
+                # Call OpenRouter API
+                headers = {
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": request.host_url,
+                    "X-Title": "Personal AI Chat"
+                }
+                
+                payload = {
+                    "model": model,
+                    "messages": messages
+                }
+                
+                response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=30)
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    assistant_message = result['choices'][0]['message']['content']
+                    
+                    # Save both messages to database
+                    save_message(user_id, "user", user_message, model)
+                    save_message(user_id, "assistant", assistant_message, model)
+                    
+                    # Inform user if fallback was used
+                    model_note = ""
+                    if model != selected_model:
+                        model_note = f"\n\n_Note: Using {model} (selected model was rate-limited)_"
+                    
+                    return jsonify({
+                        'response': assistant_message + model_note,
+                        'model': model
+                    })
+                else:
+                    # Store error and try next model
+                    error_data = response.json()
+                    last_error = error_data.get('error', {}).get('message', response.text)
+                    continue
+                    
+            except requests.exceptions.Timeout:
+                last_error = "Request timeout"
+                continue
+            except Exception as e:
+                last_error = str(e)
+                continue
         
-        response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload)
-        
-        if response.status_code == 200:
-            result = response.json()
-            assistant_message = result['choices'][0]['message']['content']
-            
-            # Save both messages to database
-            save_message(user_id, "user", user_message, selected_model)
-            save_message(user_id, "assistant", assistant_message, selected_model)
-            
-            return jsonify({
-                'response': assistant_message,
-                'model': selected_model
-            })
-        else:
-            return jsonify({'error': f'OpenRouter API error: {response.text}'}), 500
+        # All models failed
+        return jsonify({'error': f'All models rate-limited or unavailable. Please try again in a few minutes or add credits to OpenRouter. Last error: {last_error}'}), 429
             
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -245,6 +278,28 @@ def clear_history():
 @app.route('/health')
 def health():
     return jsonify({'status': 'ok', 'timestamp': datetime.now().isoformat()})
+
+# Error handlers
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({'error': 'Page not found'}), 404
+
+@app.errorhandler(500)
+def internal_error(e):
+    return jsonify({'error': 'Internal server error', 'details': str(e)}), 500
+
+# Test route to check if app is running
+@app.route('/test')
+def test():
+    return '''
+    <html>
+        <body>
+            <h1>App is running!</h1>
+            <p>If you see this, the app is working.</p>
+            <a href="/login">Go to Login</a>
+        </body>
+    </html>
+    '''
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
