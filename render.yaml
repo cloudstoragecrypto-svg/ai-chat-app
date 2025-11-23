@@ -3,11 +3,12 @@ services:
     name: ai-chat-app
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: gunicorn --bind 0.0.0.0:$PORT app:app --timeout 120
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: OPENROUTER_API_KEY
         sync: false
       - key: SECRET_KEY
+
         generateValue: true
