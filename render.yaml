@@ -10,5 +10,5 @@ services:
       - key: OPENROUTER_API_KEY
         sync: false
       - key: SECRET_KEY
-
         generateValue: true
+
